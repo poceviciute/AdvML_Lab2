@@ -21,11 +21,11 @@ x_symbols <- c(paste0("x", 1:n))
 e_prob <- 0.2
 emission_probs <- e_prob*diag(nrow = n)
 diag(emission_probs[-1,]) <- rep(e_prob, n-1)
-diag(emission_probs[3:n,]) <- rep(e_prob, n-2)
+diag(emission_probs[-(1:2),]) <- rep(e_prob, n-2)
 diag(emission_probs[1:2,(n-1):n]) <- rep(e_prob, 2)
 emission_probs[1,n] <- e_prob
-emission_probs2 <- t(emission_probs)
-emission_probs <- emission_probs + emission_probs2 - e_prob*diag(nrow = n)
+emission_probs <- emission_probs + t(emission_probs) - e_prob*diag(nrow = n)
+rowSums(emission_probs)==1
 
 t_prob <- 0.5
 trans_probs <- t_prob*diag(nrow = 10)
