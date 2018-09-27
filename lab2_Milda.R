@@ -1,31 +1,15 @@
 ## QUestions for Jose
 # Can the robot move one sector back? That is, if robot stands in sector i, then it can move to sectors i or i+1?
 # If robot is at sector 10, is 10 + 1 = sector 1?
-
+# Are smooth probabilities given by the backward algorithm (backward function)?
 
 
 ################################################################################
 ## Questions 1
 
-robot_moves <- function(init_pos){
-    init_pos <- as.numeric(init_pos)
-    if (init_pos == 10){
-        states <- c(init_pos,1)   
-    }else{
-        states <- c(init_pos,init_pos+1)  
-    }
-    transProbs <- matrix(rep.int(0.5,4),2)
-    
-}
 # Preparing states and readings
 
-grid_states <- c()
-a< -c()
-for (i in 1:10){
-    a <- paste0("Sector ",i)
-    grid_states[i] <- a
-}
-
+grid_states <- c(paste0("Sector ",1:10))
 Readings <- grid_states
 
 # Building states probabilities
@@ -66,67 +50,28 @@ Path_df <- data.frame(hidden_state=Robot_path$states,observation=Robot_path$obse
 ## Question 3
 # P(Zt|X1:t)
 
-# Filtering
-Path_df$observation
-forward_probs <- forward(hmm = Robot_hmm, observation = Path_df$observation)
-
-# Path calculated by hand based on the forward probabilities
-the_path <- apply(forward_probs,2,function(line){
-    # select the path with the highest probability
-    index <- which.max(line)
-    return(grid_states[index])
-})
-
-
-
-# Smoothing - in wikipedia it says its hsould be forward-backward algorithm, but hmm package does not have it. 
-# Instead it has backward algorithm
-
-
-backward_probs <- backward(hmm = Robot_hmm, observation = Path_df$observation)
-
-# The most likely path calculated by the Viterbi Algorithm
-
-viterbi_path <- viterbi(hmm = Robot_hmm, observation = Path_df$observation)
-True_path <- Path_df$hidden_state
-
-plotdf1 <- data.frame(time = 1:100,vpath=viterbi_path,real=True_path)
-library(ggplot2)
-ggplot(plotdf1, aes(x=time))+
-    geom_point(aes(y=vpath,colour="Viterbi"))+
-    geom_point(aes(y=real,colour="Actual"), size = 2)
-
-plot(x=plotdf1$time,y=plotdf1$vpath,type="l",col="red")
-points(x=plotdf1$time,y=plotdf1$vpath,col="red")
-lines(x=plotdf1$time,y=plotdf1$real,col="blue")
-points(x=plotdf1$time,y=plotdf1$real,col="blue")
-
-## Question 4
-
-# Normalising the probabilities 
-e_forw <- exp(forward_probs)
-distr_forw <- prop.table(e_forw,2)
-e_back <- exp(backward_probs)
-distr_back <- prop.table(e_back,2)
-
-
-# Path calculated by hand based on the forward probabilities
-forward_path <- apply(distr_forw,2,function(line){
-    # select the path with the highest probability
-    m <- max(line)
-    list_m <- which(line == m)
+robot_moves <- function(hmm,xs){
+    # Filtering
+    forward_probs <- forward(hmm = hmm, observation = xs)
     
-    if (length(list_m) != 1){
-        # if some hav ethe same highest prob, randomly select one of them
-        index <- sample(list_m,1)
-    } else {
-    index <- list_m
-    }
-    return(grid_states[index])
-})
+    # Smoothing - in wikipedia it says it should be forward-backward algorithm, but hmm package does not have it. 
+    # Instead it has backward algorithm
+    
+    
+    backward_probs <- backward(hmm = hmm, observation = xs)
+    
+    # Normalising the probabilities 
+    e_forw <- exp(forward_probs)
+    distr_forw <- prop.table(e_forw,2)
+    e_back <- exp(backward_probs)
+    distr_back <- prop.table(e_back,2)
+    
+    # The most likely path calculated by the Viterbi Algorithm
+    viterbi_path <- viterbi(hmm = hmm, observation = xs)
+    return(list(frw_probs = distr_forw, bwrd_probs = distr_back, viterbiP = viterbi_path))
+}
 
-# Path calculated by hand based on the backward probabilities
-backward_path <- apply(distr_back,2,function(line){
+path_finder <- function(line){
     # select the path with the highest probability
     m <- max(line)
     list_m <- which(line == m)
@@ -138,13 +83,113 @@ backward_path <- apply(distr_back,2,function(line){
         index <- list_m
     }
     return(grid_states[index])
-})
+}
 
-compare1 <- forward_path==True_path
-table(compare1)
+result3 <- robot_moves(Robot_hmm,Path_df$observation)
 
-compare2 <- viterbi_path==True_path
-table(compare2)
 
-compare3 <- backward_path==True_path
-table(compare3)
+
+
+## Question 4
+
+# Path calculated by hand based on the forward probabilities
+forward_path <- apply(result3$frw_probs,2,path_finder)
+True_path <- Path_df$hidden_state
+
+plotdf1 <- data.frame(time = 1:100,vpath=result3$viterbiP,real=True_path)
+library(ggplot2)
+ggplot(plotdf1, aes(x=time))+
+    geom_point(aes(y=vpath,colour="Viterbi"))+
+    geom_point(aes(y=real,colour="Actual"), size = 2)
+
+plot(x=plotdf1$time,y=plotdf1$vpath,type="l",col="red")
+points(x=plotdf1$time,y=plotdf1$vpath,col="red")
+lines(x=plotdf1$time,y=plotdf1$real,col="blue")
+points(x=plotdf1$time,y=plotdf1$real,col="blue")
+
+# Path calculated by hand based on the backward probabilities
+backward_path <- apply(result3$bwrd_probs,2,path_finder)
+
+accuracy <- function(pathA, trueP){
+    compare <- pathA==trueP
+    t <- table(compare)
+    accur <- t[2]/(sum(t)) 
+    return(list(accuracy=accur,table=t))
+}
+
+
+result_f <- accuracy(forward_path,True_path)
+result_v <- accuracy(viterbi_path,True_path)
+result_b <- accuracy(backward_path,True_path)
+    
+
+## Question 5
+
+sim_probs <- function(hmm,sampleN){
+    
+    print(sampleN)
+    simulation <- simHMM(hmm=hmm,length=sampleN)
+    
+    print("after simulation")
+    xs <- simulation$observation
+    # Filtering
+    print("before filtering")
+    forward_probs <- forward(hmm = hmm, observation = xs)
+    
+    # Smoothing - in wikipedia it says it should be forward-backward algorithm, but hmm package does not have it. 
+    # Instead it has backward algorithm
+    print("before smoothing")
+    backward_probs <- backward(hmm = hmm, observation = xs)
+    
+    print("before normalisation")
+    # Normalising the probabilities 
+    e_forw <- exp(forward_probs)
+    distr_forw <- prop.table(e_forw,2)
+    e_back <- exp(backward_probs)
+    distr_back <- prop.table(e_back,2)
+    
+    return(list(Xs=xs,distr_forw=distr_forw,distr_back=distr_back,Zs=simulation$states))
+}
+
+do_everything <- function(step_a,hmm){
+    #step_a <- sim_probs(hmm,sampleN)
+    print("before path finders")
+    # The most likely path calculated by the Viterbi Algorithm
+    print(hmm)
+    print(step_a$Xs)
+    v_path <- viterbi(hmm = hmm, observation = step_a$Xs)
+    # Path calculated manually based on the forward and backward probabilities
+    f_path <- lapply(step_a$distr_forw,path_finder)
+    b_path <- lapply(step_a$distr_back,path_finder)
+    print("before true states")
+    True_p <- step_a$Zs
+    print("before accurancy")
+
+    accurF <- accuracy(f_path,True_p)
+    accurB <- accuracy(b_path,True_p)
+    accurV <- accuracy(v_path,True_p)
+    print("before return")
+    return(list(resultF = accurF,resultB = accurB,resultV = accurV))
+    #return(list(resultF = accurF,resultB = accurB))
+}
+
+
+
+
+# Simulate with different sample sizes
+samples <- seq(500,10000,by=500)
+n <- length(samples)
+robot_sim <- lapply(samples, do_everything,hmm=Robot_hmm)
+#robot_10000 <- simHMM(Robot_hmm,10000)
+
+aaa <- sim_probs(Robot_hmm,500)
+bbb <- forward(hmm = Robot_hmm, observation = aaa$Xs)
+e_bbb <- exp(bbb)
+distr_bbb <- prop.table(e_bbb,2)
+aaa2 <- do_everything(aaa,Robot_hmm)
+
+f_path <- lapply(aaa$distr_back,path_finder)
+
+forward_path100 <- apply(result3$frw_probs,2,path_finder)
+
+# Why forward and backward algorithms produces NaN for some observations?.. Is my methods wrong?
