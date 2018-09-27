@@ -1,17 +1,26 @@
-## QUestions for Jose
-# Can the robot move one sector back? That is, if robot stands in sector i, then it can move to sectors i or i+1?
-# If robot is at sector 10, is 10 + 1 = sector 1?
-# Are smooth probabilities given by the backward algorithm (backward function)?
+---
+title: "Report_Lab2_Milda"
+author: "Milda Poceviciute"
+date: "27 September 2018"
+output: pdf_document
+---
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
 
-################################################################################
-## Questions 1
-
-# Preparing states and readings
+```{r,echo=FALSE,warning=FALSE,message=FALSE}
+library(entropy)
 library(HMM)
+set.seed(12345)
+```
+
+## Question 1
+
+```{r }
+# Create states
 grid_states <- c(paste0("Sector ",1:10))
 Readings <- grid_states
-set.seed(12345)
 
 # Building states probabilities
 Tprobs1 <- c(rep.int(0.5,2),rep.int(0,8))
@@ -41,15 +50,25 @@ probs10 <- c(rep.int(0.2,2),rep.int(0,5),rep.int(0.2,3))
 
 emissProbs <- matrix(c(probs1,probs2,probs3,probs4,probs5,probs6,probs7,probs8,probs9,probs10),ncol=10,nrow=10)
 
+# Initiate HMM
+
 Robot_hmm <- initHMM(States=grid_states, Symbols=Readings, startProbs=rep.int(0.1,10), transProbs=transProbs, emissionProbs=emissProbs)
 
+```
+
+
 ## Question 2
+
+```{r}
 Robot_path <- simHMM(Robot_hmm,100)
+```
 
 
 ## Question 3
-# P(Zt|X1:t)
 
+$P(Z^t|X^{1:t})$
+
+```{r}
 robot_probs <- function(hmm,xs){
     # Filtering
     forward_probs <- forward(hmm = hmm, observation = xs)
@@ -92,7 +111,17 @@ path_finder <- function(line){
 
 result3 <- robot_probs(hmm=Robot_hmm,xs=Robot_path$observation)
 
+```
+
 ## Question 4
+
+```{r}
+accuracy <- function(pathA, trueP){
+    compare <- pathA==trueP
+    t <- table(compare)
+    accur <- t[2]/(sum(t)) 
+    return(list(accuracy=accur,table=t))
+}
 
 # Path calculated by hand based on the forward probabilities
 filter_path <- apply(result3$filter_prob,2,path_finder)
@@ -102,43 +131,30 @@ True_path <- Robot_path$states
 # The most likely path calculated by the Viterbi Algorithm
 viterbi_path <- viterbi(hmm = Robot_hmm, observation = Robot_path$observation)
 
-plotdf1 <- data.frame(time = 1:100,vpath=result3$viterbiP,real=True_path)
-library(ggplot2)
-ggplot(plotdf1, aes(x=time))+
-    geom_point(aes(y=vpath,colour="Viterbi"))+
-    geom_point(aes(y=real,colour="Actual"), size = 2)
-
-plot(x=plotdf1$time,y=plotdf1$vpath,type="l",col="red")
-points(x=plotdf1$time,y=plotdf1$vpath,col="red")
-lines(x=plotdf1$time,y=plotdf1$real,col="blue")
-points(x=plotdf1$time,y=plotdf1$real,col="blue")
-
-
-
-accuracy <- function(pathA, trueP){
-    compare <- pathA==trueP
-    t <- table(compare)
-    accur <- t[2]/(sum(t)) 
-    return(list(accuracy=accur,table=t))
-}
-
+# plotdf1 <- data.frame(time = 1:100,vpath=result3$viterbiP,real=True_path)
+# library(ggplot2)
+# ggplot(plotdf1, aes(x=time))+
+#     geom_point(aes(y=vpath,colour="Viterbi"))+
+#     geom_point(aes(y=real,colour="Actual"), size = 2)
+# 
+# plot(x=plotdf1$time,y=plotdf1$vpath,type="l",col="red")
+# points(x=plotdf1$time,y=plotdf1$vpath,col="red")
+# lines(x=plotdf1$time,y=plotdf1$real,col="blue")
+# points(x=plotdf1$time,y=plotdf1$real,col="blue")
 
 result_f <- accuracy(filter_path,True_path)
 result_v <- accuracy(viterbi_path,True_path)
 result_s <- accuracy(smooth_path,True_path)
-    
+```
 
 ## Question 5
 
-sim_probs <- function(hmm,sampleN,flag=0){
+```{r}
+sim_probs <- function(hmm,sampleN){
     
     simulation <- simHMM(hmm=hmm,length=sampleN)
-    result_probs <- roFALSEbot_probs(hmm=hmm,xs=simulation$observation )
-    
-    if (flag == 1){
-    return(result_probs$filter_prob)
-    }
-    
+    result_probs <- robot_probs(hmm=hmm,xs=simulation$observation )
+
     # Path calculated by hand based on the forward probabilities
     filter_path2 <- apply(result_probs$filter_prob,2,path_finder)
     # Path calculated by hand based on the backward probabilities
@@ -157,22 +173,33 @@ sim_probs <- function(hmm,sampleN,flag=0){
 
 question5 <- lapply(rep.int(100,5),sim_probs,hmm=Robot_hmm)
 
+```
+
 ## Question 6
 
+The lower the Shannon entropy, the more information distribution contains.
+
+
+```{r}
 entropy <- apply(result3$filter_prob,2,entropy.empirical)
 
 plot(entropy, type="l")
 
-# The lower the Shannon entropy, the more information distribution contains.
+```
+
 
 ## Question 7
 
-transProbs
 
+$P(Z^{t+1}|X^{1:t})$
+
+```{r}
 Z100 <- matrix(rep(result3$filter_prob[,100],10),nrow=10,ncol=10)
-
 Z_101 <- t(transProbs) %*% Z100[,1]
+```
 
-# solution <-c(0,0.375*0.5,(0.375*0.5+0.625*0.5),0.625*0.5,0,0,0,0,0,0)
-# solution
+
+
+
+
 
