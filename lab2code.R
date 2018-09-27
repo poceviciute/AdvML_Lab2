@@ -24,7 +24,7 @@ diag(emission_probs[-1,]) <- rep(e_prob, n-1)
 diag(emission_probs[-(1:2),]) <- rep(e_prob, n-2)
 diag(emission_probs[1:2,(n-1):n]) <- rep(e_prob, 2)
 emission_probs[1,n] <- e_prob
-emission_probs <- emission_probs + t(emission_probs) - e_prob*diag(nrow = n)
+emission_probs <- emission_probs + t(emission_probs) - diag(emission_probs)
 rowSums(emission_probs)==1
 
 t_prob <- 0.5
@@ -41,20 +41,45 @@ hmm_sim1 <- simHMM(hmm_init, length=100)
 
 #3
 
-hmm_probs <- function(hmm_model, hmm_obs){
-  smoothed_prob <- 0
-  filtered_prob <- 0
-  most_probable_path <- 0
-  return(data.frame("smoothed"=smoothed_prob, "filtered"=filtered_prob, "probable path"=most_probable_path))
+hmm_probs <- function(hmm_model, hmm_obs, states){
+  smoothed_prob <- prop.table(exp(backward(hmm = hmm_model, observation = hmm_obs)))
+  smoothed_path <- as.vector(apply(smoothed_prob, 2, function(x){states[which.max(x)]}))
+  filtered_prob <- prop.table(exp(forward(hmm = hmm_model, observation = hmm_obs)))
+  filtered_path <- as.vector(apply(filtered_prob, 2, function(x){states[which.max(x)]}))
+  most_probable_path <- viterbi(hmm = hmm_model, observation = hmm_obs)
+  return(list("smoothed"=smoothed_prob,"smoothed_path"=smoothed_path, "filtered"=filtered_prob, "filtered_path"=filtered_path,"viterbi_path"=most_probable_path))
 }
 
-hmm_probs(hmm_init, hmm_sim1$observation)
+hmm_probs1<-hmm_probs(hmm_init, hmm_sim1$observation, z_states)
+hmm_probs1$smoothed_path
+hmm_probs1$filtered_path
+hmm_probs1$viterbi_path
 
 #4
+path_comp <- function(path1, path2){
+  return(table(path1==path2))
+}
 
+true_path <- hmm_sim1$states
+path_comp(hmm_probs1$smoothed_path, true_path)
+path_comp(hmm_probs1$filtered_path, true_path)
+path_comp(hmm_probs1$viterbi_path, true_path)
 
 #5
 
+set.seed(12345)
+hmm_sim2 <- simHMM(hmm_init, length=100)
+hmm_probs2<-hmm_probs(hmm_init, hmm_sim2$observation, z_states)
+path_comp(hmm_probs2$smoothed_path, true_path)
+path_comp(hmm_probs2$filtered_path, true_path)
+path_comp(hmm_probs2$viterbi_path, true_path)
+
+set.seed(98765)
+hmm_sim3 <- simHMM(hmm_init, length=100)
+hmm_probs3<-hmm_probs(hmm_init, hmm_sim3$observation, z_states)
+path_comp(hmm_probs3$smoothed_path, true_path)
+path_comp(hmm_probs3$filtered_path, true_path)
+path_comp(hmm_probs3$viterbi_path, true_path)
 
 #6
 
