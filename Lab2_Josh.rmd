@@ -1,0 +1,191 @@
+---
+title: "AML_Lab2"
+author: "Josh Hyungyum Kim"
+date: "2018 - 9 - 27"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### 1. Build a hidden Markov model (HMM) for the scenario described above.
+
+```{r, message=FALSE}
+
+# Load packages
+require(HMM)
+require(entropy)
+
+# 1.
+# Build a HMM model
+
+# trasition probability matrix
+trans_mat <- matrix(0, ncol = 10, nrow = 10)
+for(i in 1:9){
+  trans_mat[i,i] <- 0.5
+  trans_mat[i,i+1] <- 0.5
+}
+trans_mat[10,1] <- 0.5
+trans_mat[10,10] <- 0.5
+
+# emission probability matrix
+emi_mat <- matrix(0, ncol = 10, nrow = 10)
+for(i in 3:8){
+  emi_mat[i,i] <- 0.2
+  emi_mat[i,i+1] <- 0.2
+  emi_mat[i,i+2] <- 0.2
+  emi_mat[i,i-1] <- 0.2
+  emi_mat[i,i-2] <- 0.2
+}
+emi_mat[1,c(1,2,3,9,10)] <- 0.2
+emi_mat[2,c(1,2,3,4,10)] <- 0.2
+emi_mat[9,c(1,7,8,9,10)] <- 0.2
+emi_mat[10,c(1,2,8,9,10)] <- 0.2
+
+# Build model with initHMM()
+model1 <- initHMM(States = c(1,2,3,4,5,6,7,8,9,10),
+                  Symbols = c(1,2,3,4,5,6,7,8,9,10),
+                  startProbs = c(1,0,0,0,0,0,0,0,0,0),
+                  transProbs = trans_mat,
+                  emissionProbs = emi_mat)
+
+model1
+```
+
+### 2. Simulate the HMM for 100 time steps.
+
+```{r}
+
+# 2. 
+set.seed(12345)
+
+# simulate 100 steps with simHMM()
+res1 <- simHMM(model1, 100)
+print(res1)
+```
+
+### 3. Discard the hidden states and compute the most probable path.
+
+```{r}
+
+# 3.
+# Taking only observations
+obs1 <- res1$observation
+
+# Filtered and smoothed probs
+filtered1 <- forward(model1, obs1)
+smoothed1 <- posterior(model1, obs1)
+
+# Most probable path
+path1 <- viterbi(model1, obs1)
+```
+
+
+### 4. Compute accurace of the filtered and smoothed probability distributions and most probable path.
+
+```{r}
+
+# 4.
+
+# Get states from the probability dists. by using apply
+filter_states <- apply(prop.table(exp(filtered1)), MARGIN = 2, FUN=which.max)
+smooth_states <- apply(prop.table(smoothed1), MARGIN = 2, FUN=which.max)
+
+# True states
+true_states <- res1$states
+
+# Accuracy
+list(Accuracy_of_filtered=table(true_states==filter_states),
+     Accuracy_of_smoothed=table(true_states==smooth_states),
+     Accuracy_of_path=table(true_states==path1))
+```
+
+### 5. Repeat wiht different samples.
+
+```{r}
+
+# 5.
+set.seed(123456789)
+
+
+# 3 more simulations 
+res2 <- simHMM(model1, 100)
+res3 <- simHMM(model1, 100)
+res4 <- simHMM(model1, 100)
+
+# Taking only observations
+obs2 <- res2$observation
+obs3 <- res3$observation
+obs4 <- res4$observation
+
+# Filtered and smoothed probs
+filtered2 <- forward(model1, obs2)
+smoothed2 <- posterior(model1, obs2)
+filtered3 <- forward(model1, obs3)
+smoothed3 <- posterior(model1, obs3)
+filtered4 <- forward(model1, obs4)
+smoothed4 <- posterior(model1, obs4)
+
+# Most probable path
+path2 <- viterbi(model1, obs2)
+path3 <- viterbi(model1, obs3)
+path4 <- viterbi(model1, obs4)
+
+# Get states from the probability dists. by using apply
+filter_states2 <- apply(prop.table(exp(filtered2)), MARGIN = 2, FUN=which.max)
+smooth_states2 <- apply(prop.table(smoothed2), MARGIN = 2, FUN=which.max)
+filter_states3 <- apply(prop.table(exp(filtered3)), MARGIN = 2, FUN=which.max)
+smooth_states3 <- apply(prop.table(smoothed3), MARGIN = 2, FUN=which.max)
+filter_states4 <- apply(prop.table(exp(filtered4)), MARGIN = 2, FUN=which.max)
+smooth_states4 <- apply(prop.table(smoothed4), MARGIN = 2, FUN=which.max)
+
+# True states
+true_states2 <- res2$states
+true_states3 <- res3$states
+true_states4 <- res4$states
+
+# Accuracy
+list(Accuracy_of_filtered2=table(true_states==filter_states2),
+     Accuracy_of_smoothed2=table(true_states==smooth_states2),
+     Accuracy_of_path2=table(true_states==path2))
+
+list(Accuracy_of_filtered3=table(true_states==filter_states3),
+     Accuracy_of_smoothed3=table(true_states==smooth_states3),
+     Accuracy_of_path3=table(true_states==path3))
+
+list(Accuracy_of_filtered4=table(true_states==filter_states4),
+     Accuracy_of_smoothed4=table(true_states==smooth_states4),
+     Accuracy_of_path4=table(true_states==path4))
+
+```
+
+### 6. Is it true that the more observations you have the better you know where the robot is ?
+
+```{r}
+
+# 6. 
+
+plot(apply(prop.table(exp(filtered1)), 2, entropy.empirical), col="darkblue",
+     type="l", xlab="Steps", ylab="Entropy", main="Entropy plot of filtered distribution")
+grid()
+```
+No
+
+### 7. Consider any of the samples above of length 100. Compute the probabilities of the hidden states for the time step 101.
+
+```{r}
+
+# 7.
+
+smoothed1[,100] %*% trans_mat
+```
+
+\clearpage
+
+### 8. Appendix
+
+```{r, ref.label=knitr::all_labels(), echo=TRUE, eval=FALSE}
+
+```
+
