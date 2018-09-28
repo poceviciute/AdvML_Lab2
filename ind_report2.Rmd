@@ -1,5 +1,13 @@
-# Advanced machine learning
+---
+title: '732A96 Lab 2: Hidden Markov Models'
+author: "Fanny Karelius (fanka300)"
+date: "27 september 2018"
+output: html_document
+---
 
+# Question 1
+
+```{r,}
 #Lab 2
 
 # 10 sectors
@@ -34,13 +42,18 @@ trans_probs <- t(trans_probs)
 trans_probs[n,1] <- t_prob
 
 hmm_init <- initHMM(z_states, x_symbols, transProbs = trans_probs, emissionProbs = emission_probs)
+```
 
-#2
+# Question 2
+
+```{r}
 set.seed(123456789)
 hmm_sim1 <- simHMM(hmm_init, length=100)
+```
 
-#3
+# Question 3
 
+```{r}
 hmm_probs <- function(hmm_model, hmm_obs, states){
   alpha <- exp(forward(hmm = hmm_model, observation = hmm_obs))
   beta <- exp(backward(hmm = hmm_model, observation = hmm_obs))
@@ -58,8 +71,11 @@ hmm_probs1<-hmm_probs(hmm_init, hmm_sim1$observation, z_states)
 hmm_probs1$smoothed_path
 hmm_probs1$filtered_path
 hmm_probs1$viterbi_path
+```
 
-#4
+# Question 4
+
+```{r}
 true_path1 <- hmm_sim1$states
 
 path_comp <- function(path1, path2=true_path1){
@@ -71,10 +87,10 @@ path_comp <- function(path1, path2=true_path1){
 path_comp(hmm_probs1$smoothed_path)
 path_comp(hmm_probs1$filtered_path)
 path_comp(hmm_probs1$viterbi_path)
+```
 
-
-#5
-
+# Question 5
+```{r}
 set.seed(12345)
 hmm_sim2 <- simHMM(hmm_init, length=100)
 hmm_probs2<-hmm_probs(hmm_init, hmm_sim2$observation, z_states)
@@ -90,41 +106,31 @@ hmm_probs3<-hmm_probs(hmm_init, hmm_sim3$observation, z_states)
 path_comp(hmm_probs3$smoothed_path, true_path3)
 path_comp(hmm_probs3$filtered_path, true_path3)
 path_comp(hmm_probs3$viterbi_path, true_path3)
+```
 
-#6
+# Question 6
+
+```{r}
 library(entropy)
-
-# set.seed(123456789)
-# hmm_sim61 <- simHMM(hmm_init, length=200)
-# hmm_probs61<-hmm_probs(hmm_init, hmm_sim61$observation, z_states)
-# path_comp(hmm_probs61$smoothed_path, hmm_sim61$states)
-# path_comp(hmm_probs61$filtered_path, hmm_sim61$states)
-# path_comp(hmm_probs61$viterbi_path, hmm_sim61$states)
-# 
-# hmm_sim62 <- simHMM(hmm_init, length=300)
-# hmm_probs62<-hmm_probs(hmm_init, hmm_sim62$observation, z_states)
-# path_comp(hmm_probs62$smoothed_path, hmm_sim62$states)
-# path_comp(hmm_probs62$filtered_path, hmm_sim62$states)
-# path_comp(hmm_probs62$viterbi_path, hmm_sim62$states)
-# 
-# hmm_sim63 <- simHMM(hmm_init, length=250)
-# hmm_probs63<-hmm_probs(hmm_init, hmm_sim63$observation, z_states)
-# path_comp(hmm_probs63$smoothed_path, hmm_sim63$states)
-# path_comp(hmm_probs63$filtered_path, hmm_sim63$states)
-# path_comp(hmm_probs63$viterbi_path, hmm_sim63$states)
-
 entropy1 <- as.vector(apply(hmm_probs1$filtered, 2, entropy.empirical))
 plot(entropy1, type="l")
 entropy2 <- as.vector(apply(hmm_probs2$filtered, 2, entropy.empirical))
 plot(entropy2, type="l")
 entropy3 <- as.vector(apply(hmm_probs3$filtered, 2, entropy.empirical))
 plot(entropy3, type="l")
+```
 
-#7
+# Question 7
 
+```{r}
 prob100 <- matrix(nrow=n, ncol=10)
 prob100[1:n,] <- hmm_probs1$smoothed[1:n,100]
 prob101<-t(trans_probs)%*%prob100
 rownames(prob101) <- z_states
 prob101<-prob101[,1]
+```
 
+#Appendix
+
+```{r, ref.label=knitr::all_labels(),echo=TRUE,eval=FALSE}
+```
