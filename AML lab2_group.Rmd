@@ -7,14 +7,21 @@ output: pdf_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
-set.seed(12345)
-require(HMM)
 ```
 
 #Q1
 For the scenario described in the lab instruction, we made the hidden Markov model (HMM):
 
 ```{r}
+
+# seed for reproducible results
+set.seed(12345)
+
+# package loading
+require(HMM)
+
+# Q1.
+
 transP<-diag(x = 0.5, 10, 10, names = TRUE)
 for (i in 1:9){
   transP[i,i+1]=0.5
@@ -42,22 +49,29 @@ for (i in 3:10){
   emissionR[9,1]=0.2
 
   
-fit1 <- initHMM(
-States = c(1:10),
-Symbols = c(1:10),
-startProbs = c(1,rep(0,9)),
-transProbs = transP,
-emissionProbs = emissionR)
+fit1 <- initHMM(States = c(1:10),
+                Symbols = c(1:10),
+                startProbs = c(1,rep(0,9)),
+                transProbs = transP,
+                emissionProbs = emissionR)
+
 fit1
 ```
+
+
 #Q2
 We run the simulation based on our model for 100 times, and we got following results:
 
 ```{r}
+
+# Q2.
+
 sim1 <- simHMM(fit1, 100)
-sim1$states
-sim1$observation
+sim1
+
 ```
+
+
 #Q3
 Function forward in HMM package return log of $\alpha$, and function backward returns log of $\beta$. In order to get the filtering and smoothing probabilities, we use the definitions:
 
@@ -65,39 +79,53 @@ Function forward in HMM package return log of $\alpha$, and function backward re
 
 *Smoothing*: $p(Z^t|x^{0:t}) = \frac{\alpha(Z^t)\beta(Z^t)}{\sum_{z^t}\alpha(z^t)\beta(z^t)}$
 
-We also use the Viterbi algortihm implemented in the HMM package to find the most probable path. The results are following:
+We also use the Viterbi algortihm implemented in the HMM package to find the most probable path. The results are following(first 5 columns only):
 
 ```{r}
+
+# Q3.
+
 filteP <- forward(fit1, sim1$observation)
 smoothP <- posterior(fit1, sim1$observation)
+
 filter_probability <- prop.table(exp(filteP),2)
 filter_path <- as.vector(apply(filter_probability,2,which.max))
+
 smooth_probability <- prop.table(smoothP,2)
 smooth_path <- as.vector(apply(smooth_probability,2,which.max))
+
+Most_Prob_path <- viterbi(fit1, sim1$observation)
 
 cat("Filtering probabilities:")
 cat("\n")
 filter_probability[,1:5]
+
 cat("Smoothing probabilities:")
 cat("\n")
 smooth_probability[,1:5]
 
 cat("Most probable path:")
 cat("\n")
-Most_Prob_path <- viterbi(fit1, sim1$observation)
 Most_Prob_path
 
 ```
+
+
 #Q4
 We compute the accuracy of the filtered and smoothed probability distributions, and of the most probable path. Based on the results, we found the smoothed probability distribution showed the highest accuracy.
 ```{r}
+
+# Q4. 
+
 #get the most probable path
 cat("Accuracy of Filtered probability distribution:")
 cat("\n")
 length(filter_path[filter_path==sim1$states])/length(sim1$states)
+
 cat("Accuracy of Smoothed probability distribution:")
 cat("\n")
 length(smooth_path[smooth_path==sim1$states])/length(sim1$states)
+
 cat("Accuracy of the most probable path:")
 cat("\n")
 length(Most_Prob_path[Most_Prob_path==sim1$states])/length(sim1$states)
@@ -105,28 +133,34 @@ length(Most_Prob_path[Most_Prob_path==sim1$states])/length(sim1$states)
 
 #Q5
 ```{r}
-#initial the vector for storing the accuracy rates
+# Q5.
+
+#initial the vectors for storing the accuracy rates
 accuracy_filter <- c()
 accuracy_smooth <- c()
 accuracy_MPp <- c()
+
 #run 100 iterations for these three methods
 for(i in 1:100){
-#simulate from fitted model
-sim2 <- simHMM(fit1, 100)
-#compute the filtered and smoothed probability distributions
-filteP <- forward(fit1, sim2$observation)
-smoothP <- posterior(fit1, sim2$observation)
-Most_Prob_path <- viterbi(fit1, sim2$observation)
-#get the most probable path
-filter_probability <- prop.table(exp(filteP),2)
-filter_path <- as.vector(apply(filter_probability,2,which.max))
-smooth_probability <- prop.table(smoothP,2)
-smooth_path <- as.vector(apply(smooth_probability,2,which.max))
-#compute the percentage of the true hidden states that are guessed by each method.
-accuracy_filter[i] <-  length(filter_path[filter_path==sim2$states])/length(sim2$states)
-accuracy_smooth[i] <-     length(smooth_path[smooth_path==sim2$states])/length(sim2$states)
-accuracy_MPp[i] <- 
-  length(Most_Prob_path[Most_Prob_path==sim2$states])/length(sim2$states)
+  
+  #simulate from fitted model
+  sim2 <- simHMM(fit1, 100)
+  
+  #compute the filtered and smoothed probability distributions
+  filteP <- forward(fit1, sim2$observation)
+  smoothP <- posterior(fit1, sim2$observation)
+  Most_Prob_path <- viterbi(fit1, sim2$observation)
+  
+  #get the most probable path
+  filter_probability <- prop.table(exp(filteP),2)
+  filter_path <- as.vector(apply(filter_probability,2,which.max))
+  smooth_probability <- prop.table(smoothP,2)
+  smooth_path <- as.vector(apply(smooth_probability,2,which.max))
+  
+  #compute the percentage of the true hidden states that are guessed by each method.
+  accuracy_filter[i] <- length(filter_path[filter_path==sim2$states])/length(sim2$states)
+  accuracy_smooth[i] <- length(smooth_path[smooth_path==sim2$states])/length(sim2$states)
+  accuracy_MPp[i] <- length(Most_Prob_path[Most_Prob_path==sim2$states])/length(sim2$states)
 }
 
 #plot the 100 iterations' accuracies for each
@@ -141,8 +175,12 @@ From the plot, we see that the accuracy of the Smoothed probability distribution
 
 #Q6
 ```{r}
+
+# Q6.
+
+# Load package
 library(entropy)
-#?entropy.empirical
+
 #experiment on filtered distributions' entropy
 #the higher the entropy is, the more uncertainty is.
 plot(apply(filter_probability,2,entropy.empirical),type = "l",col="orange",lwd=2,ylab="Entropy",xlab="Steps")
@@ -153,6 +191,8 @@ Based on the plot, we see the entropy is fluctuating. We don't see the entropy i
 #Q7
 In order to find $p(Z_{101}|X_{0:100})$, we multiply the transition matrix with the filtering probability distribution at the time $t=100$.
 ```{r}
+
+# Q7.
 #the posterior of the state at 100 %*% the transition matrix
 #get the probabilities of the hidden
 
@@ -161,6 +201,8 @@ most_prob_position <- which.max(filter_probability[,100] %*% transP)
 ```
 
 Hence, it is most likely that the robot would be standing at sector `r most_prob_position`.
+
+\clearpage
 
 #Appendix
 
