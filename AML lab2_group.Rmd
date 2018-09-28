@@ -161,3 +161,12 @@ most_prob_position <- which.max(filter_probability[,100] %*% transP)
 ```
 
 Hence, it is most likely that the robot would be standing at sector `r most_prob_position`.
+
+#Appendix
+
+```{r, ref.label=knitr::all_labels(),echo=TRUE,eval=FALSE}
+
+```
+
+
+

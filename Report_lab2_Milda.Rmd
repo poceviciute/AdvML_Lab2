@@ -6,18 +6,19 @@ output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE)
 ```
 
 ```{r,echo=FALSE,warning=FALSE,message=FALSE}
-library(entropy)
 library(HMM)
 set.seed(12345)
 ```
 
 ## Question 1
 
-```{r }
+Based on the scenario described in the lab instruction, the hidden Markov model (HMM) is:
+
+```{r, echo=FALSE}
 # Create states
 grid_states <- c(paste0("Sector ",1:10))
 Readings <- grid_states
@@ -54,41 +55,42 @@ emissProbs <- matrix(c(probs1,probs2,probs3,probs4,probs5,probs6,probs7,probs8,p
 
 Robot_hmm <- initHMM(States=grid_states, Symbols=Readings, startProbs=rep.int(0.1,10), transProbs=transProbs, emissionProbs=emissProbs)
 
+Robot_hmm
+
 ```
 
 
 ## Question 2
 
+In order to simulate from the HMM model from Q1, the function simHMM is used.
 ```{r}
 Robot_path <- simHMM(Robot_hmm,100)
+Robot_path
 ```
 
 
 ## Question 3
 
-$P(Z^t|X^{1:t})$
+Definitions of the filtering and smoothing probability distributions are as follows:
+
+*Filtering*: $p(Z^t|x^{0:t}) = \frac{\alpha(Z^t)}{\sum_{z^t}\alpha(z^t)}$
+
+*Smoothing*: $p(Z^t|x^{0:t}) = \frac{\alpha(Z^t)\beta(Z^t)}{\sum_{z^t}\alpha(z^t)\beta(z^t)}$
+
+In the HMM package, $log(\alpha)$ is returned by the _forward_ while the $log(\beta)$ is returned by the _backward_ functions.
 
 ```{r}
 robot_probs <- function(hmm,xs){
-    # Filtering
+    # Alpha and Beta
     forward_probs <- forward(hmm = hmm, observation = xs)
-    
-    # Smoothing - in wFALSEFALSEikipedia it says it should be forward-backward algorithm, but hmm package does not have it. 
-    # Instead it has backward algorithm
-    
-    
     backward_probs <- backward(hmm = hmm, observation = xs)
     
     # Normalising the probabilities 
     e_forw <- exp(forward_probs)
     filter_prob <- prop.table(e_forw,2)
-    # to prevent the problems in case all probabilities in a column is 0
-    filter_prob[is.nan(filter_prob)] <- 0
 
     e_back <- exp(backward_probs)
     smooth_prob <- prop.table(e_forw*e_back,2)
-    # to prevent the problems in case all probabilities in a column is 0
-    smooth_prob[is.nan(smooth_prob)] <- 0
     
     return(list(filter_prob = filter_prob, smooth_prob = smooth_prob))
 }
@@ -108,10 +110,25 @@ path_finder <- function(line){
 }
 
 
-
 result3 <- robot_probs(hmm=Robot_hmm,xs=Robot_path$observation)
-
+cat("Filtering probabilities:")
+cat("\n")
+result3$filter_prob[,1:10]
+cat("Smoothing probabilities:")
+cat("\n")
+result3$smooth_prob[,1:10]
+cat("\n")
 ```
+
+The Viterbi algorithm in HMM package is used to find the most probable path:
+
+```{r}
+# The most likely path calculated by the Viterbi Algorithm
+viterbi_path <- viterbi(hmm = Robot_hmm, observation = Robot_path$observation)
+viterbi_path
+```
+
+
 
 ## Question 4
 
@@ -128,24 +145,25 @@ filter_path <- apply(result3$filter_prob,2,path_finder)
 # Path calculated by hand based on the backward probabilities
 smooth_path <- apply(result3$smooth_prob,2,path_finder)
 True_path <- Robot_path$states
-# The most likely path calculated by the Viterbi Algorithm
-viterbi_path <- viterbi(hmm = Robot_hmm, observation = Robot_path$observation)
-
-# plotdf1 <- data.frame(time = 1:100,vpath=result3$viterbiP,real=True_path)
-# library(ggplot2)
-# ggplot(plotdf1, aes(x=time))+
-#     geom_point(aes(y=vpath,colour="Viterbi"))+
-#     geom_point(aes(y=real,colour="Actual"), size = 2)
-# 
-# plot(x=plotdf1$time,y=plotdf1$vpath,type="l",col="red")
-# points(x=plotdf1$time,y=plotdf1$vpath,col="red")
-# lines(x=plotdf1$time,y=plotdf1$real,col="blue")
-# points(x=plotdf1$time,y=plotdf1$real,col="blue")
 
 result_f <- accuracy(filter_path,True_path)
 result_v <- accuracy(viterbi_path,True_path)
 result_s <- accuracy(smooth_path,True_path)
+
+#get the most probable path
+cat("Accuracy of Filtered probability distribution:")
+cat("\n")
+result_f
+cat("Accuracy of Smoothed probability distribution:")
+cat("\n")
+result_s
+cat("Accuracy of the Viterbi algorithm:")
+cat("\n")
+result_v
+
 ```
+
+From the accuracy rates above, I conlcude that the Smoothing probability distribution yields the highest accuracy.
 
 ## Question 5
 
@@ -167,11 +185,21 @@ sim_probs <- function(hmm,sampleN){
     result_v2 <- accuracy(viterbi_path2,True_path2)
     result_s2 <- accuracy(smooth_path2,True_path2)
 
-    return(list(result_f=result_f2,result_v=result_v2,result_s=result_s2))
+    return(list(result_f=result_f2$accuracy,result_v=result_v2$accuracy,result_s=result_s2$accuracy))
 }
 
 
-question5 <- lapply(rep.int(100,5),sim_probs,hmm=Robot_hmm)
+question5 <- lapply(rep.int(100,125),sim_probs,hmm=Robot_hmm)
+
+# Extract inner lists for plotting
+filter5 <- unname(unlist(lapply(question5, `[`, 1)))
+smooth5 <- unname(unlist(lapply(question5, `[`, 2)))
+viterbi5 <- unname(unlist(lapply(question5, `[`, 3)))
+
+plot(x=1:125, y = filter5, col="blue",xlab="time",ylab="Accuracy", type="l")
+lines(x=1:125,y=smooth5,col="red")
+lines(x=1:125,y=viterbi5,col="green")
+legend("bottomright",c("Filtering", "Smoothing", "Viterbi"), col = c("blue","red","green"), lty = c(1, 1, 1))
 
 ```
 
@@ -198,6 +226,12 @@ Z100 <- matrix(rep(result3$filter_prob[,100],10),nrow=10,ncol=10)
 Z_101 <- t(transProbs) %*% Z100[,1]
 ```
 
+
+#Appendix
+
+```{r, ref.label=knitr::all_labels(),echo=TRUE,eval=FALSE}
+
+```
 
 
 
