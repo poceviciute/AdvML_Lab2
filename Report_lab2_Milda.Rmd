@@ -1,5 +1,5 @@
 ---
-title: "Report_Lab2_Milda"
+title: "Report Lab2"
 author: "Milda Poceviciute"
 date: "27 September 2018"
 output: pdf_document
@@ -221,13 +221,11 @@ plot(entropy, type="l")
 
 ```
 
-The plot above shows how Shannon entropy is changing as we add more data. The lower the Shannon entropy, the more information distribution contains: the more sure it is where the robot is at that time point. However, there is no visible tendency for the entropy measurement to decrease as $t$ increases. Hence, I conclude that having more data observed does not make the estimation of the robots position more accurate.
+The plot above shows how Shannon entropy is changing as I add more data. The lower the Shannon entropy, the more information that particular distribution contains. In other words, the more sure it is where the robot is at that time point. However, there is no visible tendency for the entropy measurement to decrease as $t$ increases. Hence, I conclude that having more data observed does not make the estimation of the robot's position more accurate.
 
 ## Question 7
 
-In this question I am estimating the probability:
-
-$P(Z^{t+1}|X^{1:t})$
+In this question I am estimating the probability $P(Z^{t+1}|X^{1:t})$.
 
 It is given by the probability distribution of the robot's position at time $t$ multiplied by the transition matrix:
 
