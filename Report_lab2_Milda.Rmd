@@ -11,6 +11,7 @@ knitr::opts_chunk$set(echo = FALSE)
 
 ```{r,echo=FALSE,warning=FALSE,message=FALSE}
 library(HMM)
+library(entropy)
 set.seed(12345)
 ```
 
@@ -62,7 +63,7 @@ Robot_hmm
 
 ## Question 2
 
-In order to simulate from the HMM model from Q1, the function simHMM is used.
+In order to simulate from the HMM model from Q1, the function simHMM is used. The simulated $Z^i$ and corresponding $X^i$ are:
 ```{r}
 Robot_path <- simHMM(Robot_hmm,100)
 Robot_path
@@ -77,7 +78,7 @@ Definitions of the filtering and smoothing probability distributions are as foll
 
 *Smoothing*: $p(Z^t|x^{0:t}) = \frac{\alpha(Z^t)\beta(Z^t)}{\sum_{z^t}\alpha(z^t)\beta(z^t)}$
 
-In the HMM package, $log(\alpha)$ is returned by the _forward_ while the $log(\beta)$ is returned by the _backward_ functions.
+In the HMM package, the $log(\alpha)$ is returned by the _forward_ while the $log(\beta)$ is returned by the _backward_ functions.
 
 ```{r}
 robot_probs <- function(hmm,xs){
@@ -113,10 +114,10 @@ path_finder <- function(line){
 result3 <- robot_probs(hmm=Robot_hmm,xs=Robot_path$observation)
 cat("Filtering probabilities:")
 cat("\n")
-result3$filter_prob[,1:10]
+result3$filter_prob[,1:6]
 cat("Smoothing probabilities:")
 cat("\n")
-result3$smooth_prob[,1:10]
+result3$smooth_prob[,1:6]
 cat("\n")
 ```
 
@@ -163,7 +164,7 @@ result_v
 
 ```
 
-From the accuracy rates above, I conlcude that the Smoothing probability distribution yields the highest accuracy.
+From the accuracy rates above, I conclude that the Smoothing probability distribution yields the highest accuracy.
 
 ## Question 5
 
@@ -189,43 +190,59 @@ sim_probs <- function(hmm,sampleN){
 }
 
 
-question5 <- lapply(rep.int(100,125),sim_probs,hmm=Robot_hmm)
+question5 <- lapply(rep.int(100,100),sim_probs,hmm=Robot_hmm)
 
 # Extract inner lists for plotting
 filter5 <- unname(unlist(lapply(question5, `[`, 1)))
-smooth5 <- unname(unlist(lapply(question5, `[`, 2)))
-viterbi5 <- unname(unlist(lapply(question5, `[`, 3)))
+smooth5 <- unname(unlist(lapply(question5, `[`, 3)))
+viterbi5 <- unname(unlist(lapply(question5, `[`, 2)))
 
-plot(x=1:125, y = filter5, col="blue",xlab="time",ylab="Accuracy", type="l")
-lines(x=1:125,y=smooth5,col="red")
-lines(x=1:125,y=viterbi5,col="green")
+plot(x=1:100, y = filter5, col="blue",xlab="time",ylab="Accuracy", type="l",ylim = c(0,1))
+lines(x=1:100,y=smooth5,col="red")
+lines(x=1:100,y=viterbi5,col="green")
 legend("bottomright",c("Filtering", "Smoothing", "Viterbi"), col = c("blue","red","green"), lty = c(1, 1, 1))
 
 ```
 
-## Question 6
+From the plot above, I conclude that the path estimated by the Smoothing probability distribution performs better (has higher accuracy) in most cases. Viterbi and Filtering distribution seem to be fluctuating similarly, hence it is not possible to conclude which, if any, is more accurate.
 
-The lower the Shannon entropy, the more information distribution contains.
+This is consistent with the fact that Smoothing probability distribution includes all data points from the past and future: that is, when $Z^t$ is estimated where $0<t<T$, the observations $x^{0:T}$ are considered. The filtering probability distribution only includes the past data points, i.e. $x^{0:t}$. The access to additional data makes Smoothing probability distribution more accurate.
+
+The Viterbi algorithm finds the path that has highest probability but also is plausible, while Smoothing and Filtering produces the paths that have highest probability (but they might not be plausible). That's why Smoothing may show better accuracy than the Viterbi algorithm. 
+
+## Question 6
 
 
 ```{r}
+
 entropy <- apply(result3$filter_prob,2,entropy.empirical)
 
 plot(entropy, type="l")
 
 ```
 
+The plot above shows how Shannon entropy is changing as we add more data. The lower the Shannon entropy, the more information distribution contains: the more sure it is where the robot is at that time point. However, there is no visible tendency for the entropy measurement to decrease as $t$ increases. Hence, I conclude that having more data observed does not make the estimation of the robots position more accurate.
 
 ## Question 7
 
+In this question I am estimating the probability:
 
 $P(Z^{t+1}|X^{1:t})$
+
+It is given by the probability distribution of the robot's position at time $t$ multiplied by the transition matrix:
 
 ```{r}
 Z100 <- matrix(rep(result3$filter_prob[,100],10),nrow=10,ncol=10)
 Z_101 <- t(transProbs) %*% Z100[,1]
+most_prob_pos <- which.max(Z_101)
+cat("The probability distribution of the latent variable at time t+1 is:")
+cat("\n")
+Z_101
 ```
 
+Hence, it is most likely that the robot would be standing at the sector `r most_prob_pos`.
+
+\clearpage
 
 #Appendix
 

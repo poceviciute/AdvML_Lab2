@@ -80,7 +80,7 @@ Function forward in HMM package return log of $\alpha$, and function backward re
 
 *Smoothing*: $p(Z^t|x^{0:t}) = \frac{\alpha(Z^t)\beta(Z^t)}{\sum_{z^t}\alpha(z^t)\beta(z^t)}$
 
-We also use the Viterbi algortihm implemented in the HMM package to find the most probable path. The results are following(first 5 columns only):
+We also use the Viterbi algorithm implemented in the HMM package to find the most probable path. The results are following(first 5 columns only):
 
 ```{r}
 
@@ -172,7 +172,7 @@ legend("bottomright",c("Filtering", "Smoothing", "Viterbi"),
 col = c("green","blue","red"), lty = c(1, 1, 1))
 ```
 
-From the plot, we see that the accuracy of the Smoothed probability distribution is the highest in almost all cases. This is because, based on the formula, the smoothing includes the information from all observations (so, the observations from time points $0:t$ as well as from $t+1:T$). The filtering includes only the past observations information (that is, from $0:t$). The Viterbi algortihm finds the most likely plausible path while Smoothing produces the path that has highest probability but it might not be plausible. That's why Smoothing may show better accuracy than the Viterbi algorithm.
+From the plot, we see that the accuracy of the Smoothed probability distribution is the highest in almost all cases. This is because, based on the formula, the smoothing includes the information from all observations (so, the observations from time points $0:t$ as well as from $t+1:T$). The filtering includes only the past observations information (that is, from $0:t$). The Viterbi algorithm finds the most likely plausible path while Smoothing produces the path that has highest probability but it might not be plausible. That's why Smoothing may show better accuracy than the Viterbi algorithm.
 
 #Q6
 ```{r}
